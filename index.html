@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Momentum</title>
+    <link rel="stylesheet" href="momentum.css">
+    <link href="favicon.ico" rel="shortcut icon" />
+    <link rel="stylesheet" href="regular.css">
+    
+    
+  </head>
+  
+    
+    <body>
+      <div id="list" class="todo">
+        <h2 class="todo__caption">Список дел</h2>
+            <ul class="todo__list">
+            </ul>
+            <div class="todo__controls">
+              <input type="text" class="todo__text" />
+              <button disabled="disabled" class="todo__add">Добавить</button>
+            </div>
+          </div>
+          <script>
+            'use strict';
+            
+          // Служебная функция для добавления класса к элементу DOM
+          function addClass(elem, className) {
+          elem.className += ' ' + className;
+          }
+          
+          // Служебная функция для удаления класса с элемента DOM
+          function removeClass(elem, className) {
+          elem.className = elem.className
+          .replace(className, '').replace(/\s+$/, '');
+          }
+          
+          // Служебная функция для проверки наличия класса на элементе DOM
+          function hasClass(elem, className) {
+          return elem.className.indexOf(className) !== -1;
+        }
+        
+        /**
+          * Конструктор, инициализирующий логику списка дел
+          * на элементе с правильной версткой
+          * Параметры:
+          *  - DOM-элемент, являющийся контейнером списка 
+          *    (уже с нужными дочерними элементами)
+          */ 
+         function Todo(elem) {
+          // Ищем вложенные элементы, которые будут использованы в дальнейшем
+          // При этом рассчитываем, что они есть
+          // Если их не будет - в этом месте возникнет ошибка
+          this.eList = elem.getElementsByClassName('todo__list')[0];
+          this.eText = elem.getElementsByClassName('todo__text')[0];
+          this.eButton = elem.getElementsByClassName('todo__add')[0];
+          
+          // Кешируем контекст вызова (созданный объект), 
+          // чтобы использовать его в обработчиках
+          var that = this;
+          
+          // Добавляем обработчик изменения поля ввода
+          this.eText.addEventListener('input', function () {
+          // Если поле ввода не пусто, разблокируем кнопку "Добавить",
+          // иначе блокируем eё
+          that.eButton.disabled = !this.value;
+          // здесь this - это тот элемент, на котором случилось событие
+        });
+        
+          // Добавляем обработчик нажатия на кнопку "Добавить"
+          // (не сработает, если кнопка заблокирована)
+          this.eButton.addEventListener('click', function () {
+            var val = that.eText.value;
+            
+            // Если поле ввода не пусто
+            if (val) {
+              // вызываем метод добавления элемента в список
+              that.addItem(val);
+              
+              // очищаем поле и блокируем кнопку 
+              // (при изменении поля в коде обработчик изменения поля не вызывается)
+          that.eText.value = '';
+          that.eButton.disabled = true;
+          }
+        });
+          }
+          
+          /**
+          * Метод добавления задачи в список
+          * Параметры
+          *  - Текст задачи
+          *  - Флаг "выполнена" (сейчас не используется)
+          */
+         Todo.prototype.addItem = function (text, isCompleted) {
+           // Кешируем текущий контекст (объект со ссылками на список, кнопку, etc.)
+          var that = this;
+          
+          // Создаём новый элемент списка
+          var item = document.createElement('li');
+          
+          // Добавляем нужные классы (в зависимости от isCompleted)
+          addClass(item, 'todo__list-item');
+          
+          if (isCompleted) {
+            addClass(item, 'todo__list-item_completed_yes');
+          }
+          
+          // Создаём элемент для текста задачи
+          var txt = document.createElement('span');
+          addClass(txt, 'todo__list-item-text');
+          
+          // Пишем в него текст задачи
+          txt.innerText = text;
+          
+          // Добавляем элемент с текстом в элемент списка
+          item.appendChild(txt);
+          
+          // Функция, меняющая статус выполнения элемента списка
+          function onItemClick () {
+            if (hasClass(item, 'todo__list-item_completed_yes')) {
+              removeClass(item, 'todo__list-item_completed_yes');
+            } else {
+          addClass(item, 'todo__list-item_completed_yes');
+        }
+      }
+          
+      // Добавление её обработчиком клика по элементу списка
+      item.addEventListener('click', onItemClick);
+      
+      // Создание элемента, удаляющего задачу из списка
+          var rm = document.createElement('span');
+          addClass(rm, 'todo__list-item-remove');
+          // Добавляем в него крестик (через .innerHTML, чтобы сработал HTML-код)
+          rm.innerHTML='&#10060;';
+          // Добавляем удалялку в элемент списка
+          item.appendChild(rm);
+          
+          // Функция, удаляющая созданный элемент item из списка
+          function onRemoveItemClick (e) {
+          // Отписываем обработчики от удаляемых элементов
+          // (это не обязательно, но иногда через них может течь память)
+          item.removeEventListener('click', onItemClick);
+          this.removeEventListener('click', onRemoveItemClick);
+          
+          // Удаляем элемент списка
+          that.eList.removeChild(item);
+          }
+          
+          // Добавляем функцию выше как обработчик 
+          // для клика по крестику в элементе item
+          rm.addEventListener('click', onRemoveItemClick);
+          
+          // Добавляем элемент item в список задач (наконец-то)
+          this.eList.appendChild(item);
+          }
+          
+          // Инициализируем логику списка задач на элементе с id="list"
+          // Поскольку мы не используем прямые селекторы внутри конструктора,
+          // на странице может одновременно быть несколько списков, 
+          // которые никак друг другу не мешают
+          var todo = new Todo(document.getElementById('list'));
+          </script>
+  
+  
+
+  
+  <header class="header">
+    <div class="player">
+      <div class="player-controls">
+        <button class="play-prev player-icon"></button>
+        
+        <audio id="player" src="assets_sounds_Aqua Caelestis.mp3"></audio>
+        <div>
+          <button class="play player-icon" onclick="document.getElementById('player').play()"></button>
+          <button class="pause " onclick="document.getElementById('player').pause()"></button>
+        </div>
+        <script>
+          $('#player').on('play', function() {
+            //Меняем текст кнопки на "Пауза"
+          });
+          
+          $('#player').on('pause', function() {
+            //Меняем текст кнопки на "Воспроизвести"
+          });
+          if($('#player').paused) {
+            $('#player').play();
+          } else {
+            $('#player').pause();
+          }
+</script>
+<button class="play-next player-icon"></button>
+</div>
+       
+<ul class="play-list">✔Aqua Caelestis
+</ul>
+<ul class="play-list">✔River Flows In You</ul> 
+<ul class="play-list">✔Summer Wind</ul>
+<ul class="play-list">✔Ennio Morricone</ul>
+
+</div>
+<div class="weather">
+          <input type="text" class="city" placeholder="Minsk">
+          <div class="weather-container">
+            <i class="weather-icon owf"></i>
+            <div class="temperature"></div>
+            <div class="weather-description"></div>
+            <script>
+              async function getWeather() {   
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&lang=ru&appid=88232d9b109398ae364671569cc80151&units=metric`;
+                      const res = await fetch(url); 
+                         const data = await res.json();  
+                         
+                        } 
+                    getWeather() 
+                    
+                    const weatherIcon = document.querySelector('.weather-icon'); 
+                    const temperature = document.querySelector('.temperature'); 
+                    const weatherDescription = document.querySelector('.weather-description');
+                    const url = `https://api.openweathermap.org/data/2.5/weather?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&lang=en&appid=88232d9b109398ae364671569cc80151&units=metric`;
+                    async function getWeather() { 
+                      const url = `https://api.openweathermap.org/data/2.5/weather?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&lang=en&appid=88232d9b109398ae364671569cc80151&units=metric`;
+                     const res = await fetch(url); 
+                     const data = await res.json(); 
+                     weatherIcon.className = 'weather-icon owf'; 
+                     weatherIcon.classList.add(`owf-${data.weather[0].id}`); 
+                     temperature.textContent = ` ${data.main.temp}°C` 
+                     wind.textContent = `Wind speed: ${data.wind.speed}m/s`;
+                     weatherDescription.textContent = data.weather[0].description; 
+                     humidity.textContent = `Humidity: ${data.main.humidity}%`;
+                    }  
+                    
+                    
+                      
+                         
+                    
+                    
+                    
+                    </script>
+            </div>
+            <div class="wind"></div>
+            <div class="humidity"></div>
+            <script>
+              async function getWeather() {   
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&lang=en&appid=88232d9b109398ae364671569cc80151&units=metric`; 
+                const res = await fetch(url); 
+                const data = await res.json();  
+                
+              } 
+              getWeather() 
+              
+              const wind = document.querySelector('.wind'); 
+              const humidity = document.querySelector('.humidity');
+              async function getWeather() { 
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&lang=en&appid=88232d9b109398ae364671569cc80151&units=metric`; 
+                const res = await fetch(url); 
+                const data = await res.json(); 
+                wind.className = 'wind'; 
+                
+                
+                
+                
+                
+              }  
+              </script>
+           </div>
+           
+          </header>
+          
+          <main class="main">
+            <div class="slider-icons">
+              <button class="slide-prev slider-icon"></button>
+              <button class="slide-next slider-icon"></button>
+            </div>
+          
+
+
+        <div id="clock" class="time"></div>
+        <script>
+         window.onload = function(){
+             window.setInterval(function(){
+           var now = new Date();
+          var clock = document.getElementById("clock");
+       clock.innerHTML = now.toLocaleTimeString();
+      }, 1000);
+          };  
+        </script>
+        <date id="spanDate" class="date"></date>
+        <script type="text/javascript">
+          var months = ['January','February','March','April','May','June','July',
+              'August','September','October','November','December'];       
+                  var tomorrow = new Date();
+                       tomorrow.setTime(tomorrow.getTime() + (1000*3600*24));       
+                  document.getElementById("spanDate").innerHTML = months[tomorrow.getMonth()] + " " + tomorrow.getDate()+ ", " + tomorrow.getFullYear();
+   </script>
+        <div class="greeting-container">
+          <span class="greeting"></span>
+          
+          <script>
+            
+            var h=(new Date()).getHours();
+        if (h > 3 && h < 7) document.writeln("Доброй ночи");
+             if (h > 6 && h < 12) document.writeln("Good morning");
+             if (h > 11 && h < 17) document.writeln("Good afternoon");
+             if (h > 16 && h < 24) document.writeln("Good evening");
+             if (h > 23 || h < 4 ) document.writeln("Good night");
+          </script>
+          <textarea id="comment"></textarea>
+          <input id="fio"  type="text" class="name" placeholder="[Enter name]" />
+         <script>
+          var elements = document.querySelectorAll('input, textarea');
+
+function checkValidity() {};
+
+for (i=0; i<elements.length; i++) {
+ (function(element) {
+   var id = element.getAttribute('id');
+   element.value = sessionStorage.getItem(id); // обязательно наличие у элементов id
+   element.oninput = function() {
+     sessionStorage.setItem(id, element.value);
+     checkValidity();
+   };
+ })(elements[i]);
+}
+         </script>
+          
+          
+        </div>
+      </main>
+      <footer class="footer">
+        <button  id="next-quote"  class="change-quote"></button>
+        <div>
+          <div id="phrase" class="quote"></div>
+          <div id="author" class="author"></div>
+        <script>
+       var quotes = [
+    [
+        "Do not wait for leaders; do it alone, person to person.",
+
+        "Mother Teresa"
+    ],
+
+    [
+        "What you see depends on what you're looking for.",
+
+        "Tihon klimkovich"
+    ],
+
+    [
+        "Cherish your visions and your dreams as they are the children of your soul; the blueprints of your ultimate achievements.",
+
+        "Napoleon Hill"
+    ],
+
+    [
+        "What separates the winners from the losers is how a person reacts to each new twist of fate.",
+
+        "Donald Trump"
+    ]
+];
+
+document.getElementById("next-quote").addEventListener("click", function() {
+   
+    // выбираем случайную фразу из массива
+    // данные в массив могут попадать и через api
+    var quote = quotes[ Math.floor( Math.random() * quotes.length ) ];
+
+    // цитата
+    var phrase = document.querySelector("#phrase");
+   
+    // автор
+    var author = document.querySelector("#author");
+
+    phrase.innerHTML = quote[0];
+    author.innerHTML = quote[1];  
+});  
+        </script>
+        </div>
+      </footer>
+
+     
+
+
+<script src="js/script.js"></script>  
+</body>
+</html>
